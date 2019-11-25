@@ -23,7 +23,7 @@
       <!-- 表格 -->
       <el-row>
         <el-col>
-          <el-table :data="tableData" border style="width: 100%;margin-top:10px">
+          <el-table :data="tableData" border stripe style="width: 100%;margin-top:10px">
             <el-table-column type="index"></el-table-column>
             <el-table-column prop="username" label="姓名" width="180"></el-table-column>
             <el-table-column prop="email" label="邮箱"></el-table-column>
