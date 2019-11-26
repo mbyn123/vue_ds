@@ -168,7 +168,6 @@ export default {
       const { data: res } = await this.$axios.get('categories', {
         params: { type: 2 }
       })
-      console.log(res)
       this.parentCateList = res.data
     },
     // 实时监听级联选择器的值,是否发生变化
