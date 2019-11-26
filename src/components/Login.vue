@@ -1,6 +1,8 @@
 <template>
   <div class="login_container">
+
     <div class="login_box">
+      <div class='title'><h3>DS后台管理系统</h3></div>
       <el-form ref="loginForm1" :model="loginForm" label-width="80px" :rules="rules">
         <el-form-item label="用户名" class="login-input frist" prop="username">
           <el-input v-model="loginForm.username" prefix-icon="iconfont icon-user"></el-input>
@@ -81,9 +83,13 @@ export default {
 }
 .login_box {
   width: 450px;
-  height: 220px;
+  height: 300px;
   background-color: #fff;
   border-radius: 5px;
+  .title{
+    text-align: center;
+    font-size: 20px
+  }
 }
 .login-input {
   padding: 0 20px;

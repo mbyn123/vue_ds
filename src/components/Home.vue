@@ -15,7 +15,7 @@
             <i :class="isCollapse?'el-icon-s-unfold':'el-icon-s-fold'" @click="clickCollapse"></i>
           </div>
           <el-menu
-            background-color="#545c64"
+            background-color="#373d41"
             text-color="#fff"
             active-text-color="#ffd04b"
             :unique-opened="true"
@@ -144,7 +144,7 @@ export default {
 }
 
 .el-aside {
-  background-color: #545c64;
+  background-color: #373d41;
   .el-menu {
     border: 0;
   }

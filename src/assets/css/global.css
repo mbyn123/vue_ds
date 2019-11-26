@@ -18,3 +18,10 @@ html,body,#app{
 .el-pagination{
     margin-top: 15px;
 }
+
+.el-cascader-panel {
+    max-height: 300px;
+    display: flex;
+    border-radius: 4px;
+    font-size: 14px;
+  }

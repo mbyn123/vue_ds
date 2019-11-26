@@ -158,7 +158,7 @@ export default {
       }
     }
     return {
-      queryInfo: {
+      queryInfo: { // 请求参数
         query: '', // 查询参数,用来搜索,值为空时,刷新列表
         pagenum: 1, // 当前页码
         pagesize: 10 // 每页显示条数
@@ -225,12 +225,12 @@ export default {
         this.total = res.data.total
       }
     },
-    // 监听pagesize 每页显示条数 改变的事件
+    // 监听pagesize 当前显示条数,实时刷新页面数据
     handleSizeChange (newSize) {
       this.queryInfo.pagesize = newSize
       this.getUsersList() // 重新发送请求
     },
-    // 监听页码值 改变的事件
+    // 监听pagenum  当前页码值,实时刷新页面数据
     handleCurrentChange (newPage) {
       this.queryInfo.pagenum = newPage
       this.getUsersList() // 重新发送请求
