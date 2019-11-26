@@ -44,7 +44,7 @@
                 <el-button type="danger" size="mini" @click="deleteUser(scope.row.id)">删除</el-button>
                 <!-- 分配角色按钮 -->
                 <el-tooltip effect="dark" content="分配角色" placement="top" :enterable="false">
-                  <el-button type="warning" size="mini">设置</el-button>
+                  <el-button type="warning" size="mini" @click="allocationUser(scope.row)">设置</el-button>
                 </el-tooltip>
               </template>
             </el-table-column>
@@ -104,17 +104,27 @@
           <el-button type="primary" @click="submitAmendUser">确 定</el-button>
         </span>
       </el-dialog>
+      <!-- 分配角色 对话框 -->
+      <el-dialog title="分配角色" :visible.sync="dialogVisible3" width="40%">
+        <div>
+          <p>当前的用户：{{this.allotUser.username}}</p>
+          <p>当前的角色：{{this.allotUser.role_name}}</p>
+          <el-select v-model="value" placeholder="请选择">
+            <el-option
+              v-for="item in options"
+              :key="item.id"
+              :label="item.roleName"
+              :value="item.id"
+            ></el-option>
+          </el-select>
+        </div>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="dialogVisible3 = false">取 消</el-button>
+          <el-button type="primary" @click="submitAllocationUser">确 定</el-button>
+        </span>
+      </el-dialog>
     </el-card>
   </div>
-  <!--  分页器属性设置
-        @size-change="handleSizeChange" // 监听pagesize 每页显示条数 改变的事件
-        @current-change="handleCurrentChange" // 监听页码值 改变的事件
-        :current-page="queryInfo.pagenum" // 当前页码
-        :page-size="queryInfo.pagesize" // 每页显示条数
-        :total="total" //数据总条数
-        :page-sizes="[1, 2, 5, 10]" //每页显示条数
-        layout="total, sizes, prev, pager, next, jumper" //控制显示上述那些功能
-  -->
 </template>
 <script>
 export default {
@@ -157,6 +167,10 @@ export default {
       tableData: [], // 表格数据
       dialogVisible: false, // 添加用户功能对话框是否隐藏
       dialogVisible2: false, // 修改用户功能对话框是否隐藏
+      dialogVisible3: false, // 分配用户功能对话框是否隐藏
+      allotUser: {}, // 保存当前分配的角色数据
+      options: [], // 角色下拉框数据
+      value: '', // 新选择的角色
       // 添加用户功能,表单数据
       UserForm: {
         username: '',
@@ -276,7 +290,6 @@ export default {
     async amendUser (id) {
       this.dialogVisible2 = true
       const { data: res } = await this.$axios.get(`users/${id}`)
-      console.log(res.data)
       if (res.meta.status !== 200) {
         this.$notify.error({
           title: '获取当前用户信息失败',
@@ -338,22 +351,61 @@ export default {
           type: 'warning'
         }
       ).catch(err => err)
-      if (result === 'confirm') { // 点击确定
+      if (result === 'confirm') {
+        // 点击确定
         // 发送删除请求
         const { data: res } = await this.$axios.delete(`users/${id}`)
-        if (res.meta.status !== 200) { // 请求失败
+        if (res.meta.status !== 200) {
+          // 请求失败
           this.$notify.error({
             // 提示用户
             title: '删除失败',
             message: res.meta.msg,
             duration: 2000
           })
-        } else { // 请求成功
-          this.$message.success(res.meta.msg)// 提示用户
+        } else {
+          // 请求成功
+          this.$message.success(res.meta.msg) // 提示用户
           this.getUsersList() // 刷新表格数据
         }
-      } else { // 点击取消
+      } else {
+        // 点击取消
         this.$message.info('已取消删除')
+      }
+    },
+    // 发送请求 重新分配当前角色 获取/修改
+    async allocationUser (user) {
+      this.dialogVisible3 = true
+      this.allotUser = user
+      // 发送请求
+      const { data: res } = await this.$axios.get('roles')
+      this.options = res.data // 赋值给下拉框
+    },
+    // 发送请求 提交分配后的新角色
+    async submitAllocationUser () {
+      if (!this.value) {
+        this.$notify.error({
+          title: '分配角色失败',
+          message: '请选择新角色',
+          duration: 2000
+        })
+      } else {
+        // 发送请求 提交数据
+        const { data: res } = await this.$axios.put(
+          `users/${this.allotUser.id}/role`,
+          { rid: this.value }
+        )
+        if (res.meta.status !== 200) {
+          this.$notify.error({
+            title: '分配角色失败',
+            message: res.meta.msg,
+            duration: 2000
+          })
+        } else {
+          this.$message.success(res.meta.msg)
+          this.getUsersList()
+          this.dialogVisible3 = false
+        }
       }
     }
   }
