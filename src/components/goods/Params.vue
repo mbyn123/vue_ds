@@ -33,14 +33,35 @@
           <!-- 动态参数表格 -->
           <el-table :data="manyData" style="width: 100%">
             <!-- 展开列 -->
-            <el-table-column type="expand"></el-table-column>
+            <el-table-column type="expand">
+              <template slot-scope="scope">
+                <!-- tag标签 -->
+                <el-tag
+                  v-for="(tag,index) in scope.row.attr_vals"
+                  :key="index"
+                  closable
+                  @close="restInputConfirm(index,scope.row)"
+                >{{tag}}</el-tag>
+                <!-- 添加tag标签 -->
+                <el-input
+                  class="input-new-tag"
+                  v-if="scope.row.inputVisible"
+                  v-model="scope.row.inputValue"
+                  ref="saveTagInput"
+                  size="small"
+                  @keyup.enter.native="handleInputConfirm(scope.row)"
+                  @blur="handleInputConfirm(scope.row)"
+                ></el-input>
+                <el-button v-else size="small" @click="showInput(scope.row)">+ New Tag</el-button>
+              </template>
+            </el-table-column>
             <!-- 索引列 -->
             <el-table-column type="index"></el-table-column>
             <el-table-column prop="attr_name" label="参数名称"></el-table-column>
             <el-table-column label="操作">
               <template slot-scope="scope">
                 <el-button type="primary" size="mini" @click="editopenDialog(scope.row.attr_id)">编辑</el-button>
-                <el-button type="danger" size="mini">删除</el-button>
+                <el-button type="danger" size="mini" @click="deleteOpenDialog(scope.row.attr_id)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -52,14 +73,35 @@
           <!-- 动态参数表格 -->
           <el-table :data="onlyData" style="width: 100%">
             <!-- 展开列 -->
-            <el-table-column type="expand"></el-table-column>
+            <el-table-column type="expand">
+              <template slot-scope="scope">
+                <!-- tag标签 -->
+                <el-tag
+                  v-for="(tag,index) in scope.row.attr_vals"
+                  :key="index"
+                  closable
+                  @close="restInputConfirm(index,scope.row)"
+                >{{tag}}</el-tag>
+                <!-- 添加tag标签 -->
+                <el-input
+                  class="input-new-tag"
+                  v-if="scope.row.inputVisible"
+                  v-model="scope.row.inputValue"
+                  ref="saveTagInput"
+                  size="small"
+                  @keyup.enter.native="handleInputConfirm(scope.row)"
+                  @blur="handleInputConfirm(scope.row)"
+                ></el-input>
+                <el-button v-else size="small" @click="showInput(scope.row)">+ New Tag</el-button>
+              </template>
+            </el-table-column>
             <!-- 索引列 -->
             <el-table-column type="index"></el-table-column>
             <el-table-column prop="attr_name" label="参数名称"></el-table-column>
             <el-table-column label="操作">
               <template slot-scope="scope">
                 <el-button type="primary" size="mini" @click="editopenDialog(scope.row.attr_id)">编辑</el-button>
-                <el-button type="danger" size="mini">删除</el-button>
+                <el-button type="danger" size="mini" @click="deleteOpenDialog(scope.row.attr_id)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -120,10 +162,12 @@ export default {
       onlyData: [], // 静态参数数据
       dialogVisible: false,
       dialogVisible2: false,
-      addForm: { // 添加参数表单数据
+      addForm: {
+        // 添加参数表单数据
         attr_name: ''
       },
-      editForm: { // 修改参数表单数据
+      editForm: {
+        // 修改参数表单数据
         attr_name: ''
       },
       addrulesForm: {
@@ -178,7 +222,7 @@ export default {
       }
       this.paramsoptions = res.data
     },
-    // 发送请求 获取当前选择的商品的参数
+    // 发送请求 获取所有商品的参数数据
     async gethandleChange () {
       if (this.value.length !== 3) {
         // 控制只能选择级联第三级的数据
@@ -191,15 +235,23 @@ export default {
       if (res.meta.status !== 200) {
         this.$notify.error({
           title: '错误',
-          message: '请先选择商品',
+          message: '请选择第三级商品，才能进行操作',
           duration: 2000
         })
       } else {
+        res.data.forEach(item => {
+          // 设置tag标签中的值，分割成数组，用于v-for循环渲染
+          item.attr_vals = item.attr_vals ? item.attr_vals.split(',') : []
+          // 给每个商品参数都设置单独的inputvalue和inputVisible属性
+          item.inputVisible = false
+          item.inputValue = ''
+        })
         if (this.TabsName === 'many') {
-          this.manyData = res.data
-          console.log(this.manyData)
+          // 动态参数
+          this.manyData = res.data // 赋值给动态表格数据
         } else {
-          this.onlyData = res.data
+          // 静态参数
+          this.onlyData = res.data // 赋值给静态表格数据
         }
       }
     },
@@ -208,6 +260,8 @@ export default {
       if (this.value.length !== 3) {
         // 控制只能选择级联第三级的数据
         this.value = []
+        this.manyData = []
+        this.onlyData = []
       }
       this.gethandleChange() // 调用请求函数,发送请求
     },
@@ -223,7 +277,10 @@ export default {
     // 打开修改参数对话框 发送请求获取当前id的参数
     async editopenDialog (attrId) {
       this.dialogVisible2 = true
-      const { data: res } = await this.$axios.get(`categories/${this.cascaderId}/attributes/${attrId}`, { params: { attr_sel: this.TabsName } })
+      const { data: res } = await this.$axios.get(
+        `categories/${this.cascaderId}/attributes/${attrId}`,
+        { params: { attr_sel: this.TabsName } }
+      )
       this.editForm = res.data
     },
     // 关闭添加参数对话框,重置表单
@@ -249,7 +306,7 @@ export default {
             duration: 2000
           })
         } else {
-          this.gethandleChange()// 刷新数据
+          this.gethandleChange() // 刷新数据
           this.dialogVisible = false
           this.$message.success(res.meta.msg)
         }
@@ -259,9 +316,13 @@ export default {
     editsubmitForm () {
       this.$refs.addForm2.validate(async valid => {
         if (!valid) return
-        const { data: res } = await this.$axios.put(`categories/${this.cascaderId}/attributes/${this.editForm.attr_id}`, {
-          attr_name: this.editForm.attr_name, attr_sel: this.TabsName
-        })
+        const { data: res } = await this.$axios.put(
+          `categories/${this.cascaderId}/attributes/${this.editForm.attr_id}`,
+          {
+            attr_name: this.editForm.attr_name,
+            attr_sel: this.TabsName
+          }
+        )
         if (res.meta.status !== 200) {
           this.$notify.error({
             title: '更新失败',
@@ -274,8 +335,78 @@ export default {
           this.gethandleChange()
         }
       })
+    },
+    // 发送请求 删除参数
+    async deleteOpenDialog (attrid) {
+      const rulest = await this.$confirm(
+        '此操作将永久删除该文件, 是否继续?',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).catch(err => err)
+      if (rulest === 'confirm') {
+        const { data: res } = await this.$axios.delete(
+          `categories/${this.cascaderId}/attributes/${attrid}`
+        )
+        console.log(res)
+        this.$message.success(res.meta.msg)
+        this.gethandleChange()
+      } else {
+        this.$message.info('取消删除')
+      }
+    },
+    //  发送请求，保存更新参数属性的操作
+    async setTagInputConfirm (row) {
+      const { data: res } = await this.$axios.put(
+        `categories/${this.cascaderId}/attributes/${row.attr_id}`,
+        {
+          attr_name: row.attr_name,
+          attr_sel: row.attr_sel,
+          attr_vals: row.attr_vals.join(',')
+        }
+      )
+      console.log(res)
+      if (res.meta.status !== 200) {
+        this.$notify.error({
+          title: '提交失败',
+          message: res.meta.msg,
+          duration: 2000
+        })
+      } else {
+        this.$message.success(res.meta.msg)
+      }
+    },
+    // 新增tag标签，事件监听值的变化
+    handleInputConfirm (row) {
+      if (row.inputValue.trim().length === 0) {
+        // 输入框没有输入值
+        row.inputValue = '' // 清空输入框
+        row.inputVisible = false
+      } else {
+        row.attr_vals.push(row.inputValue.trim()) // 输入框输入值后
+        row.inputValue = '' // 清空输入框
+        row.inputVisible = false
+        // 发送请求，跟新当前操作
+        this.setTagInputConfirm(row)
+      }
+    },
+    // tag新增按钮与输入框切换
+    showInput (row) {
+      row.inputVisible = true
+      this.$nextTick(_ => {
+        // 输入框自动获得焦点 $nextTick元素被重新渲染后才指定回调
+        this.$refs.saveTagInput.$refs.input.focus()
+      })
+    },
+    // 删除tag标签
+    restInputConfirm (index, row) {
+      row.attr_vals.splice(index, 1)
+      // 发送请求，跟新当前操作
+      this.setTagInputConfirm(row)
     }
-
   }
 }
 </script>
@@ -286,5 +417,11 @@ export default {
   span {
     margin-right: 10px;
   }
+}
+.el-tag {
+  margin: 0 5px;
+}
+.input-new-tag {
+  width: 100px;
 }
 </style>
