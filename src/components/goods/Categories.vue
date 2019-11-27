@@ -88,7 +88,7 @@ export default {
         // 请求参数
         type: 3, // 获取列表层级数
         pagenum: 1, // 当前页码
-        pagesize: 5 // 每页显示条数
+        pagesize: 10 // 每页显示条数
       },
       total: 0, // 表格数据总条数,
       columns: [
@@ -172,7 +172,6 @@ export default {
     },
     // 实时监听级联选择器的值,是否发生变化
     parentCateChange () {
-      console.log(this.selectedKeys)
       if (this.selectedKeys.length > 0) {
         // 表示选中了值
         this.ClassificationForm.cat_pid = this.selectedKeys[this.selectedKeys.length - 1] // 给当前选中的父类id赋值,数组中的最后一项

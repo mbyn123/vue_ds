@@ -351,7 +351,6 @@ export default {
         const { data: res } = await this.$axios.delete(
           `categories/${this.cascaderId}/attributes/${attrid}`
         )
-        console.log(res)
         this.$message.success(res.meta.msg)
         this.gethandleChange()
       } else {
@@ -368,7 +367,6 @@ export default {
           attr_vals: row.attr_vals.join(',')
         }
       )
-      console.log(res)
       if (res.meta.status !== 200) {
         this.$notify.error({
           title: '提交失败',
@@ -424,4 +422,5 @@ export default {
 .input-new-tag {
   width: 100px;
 }
+
 </style>

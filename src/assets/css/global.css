@@ -25,3 +25,19 @@ html,body,#app{
     border-radius: 4px;
     font-size: 14px;
   }
+
+.el-steps {
+    margin: 15px;
+  }
+
+.el-step__title{
+    font-size: 13px;
+}  
+
+.el-cascader{
+    width:300px
+}
+
+/* .el-checkbox{
+    margin:0
+} */

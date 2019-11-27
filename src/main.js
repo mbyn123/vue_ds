@@ -16,6 +16,19 @@ axios.interceptors.request.use(// 设置请求拦截器
 )
 Vue.prototype.$axios = axios
 
+// 注册全局Vue过滤器，显示时间格式
+Vue.filter('date', function (dateVal) {
+  const dt = new Date(dateVal)
+  const y = dt.getFullYear()
+  const m = (dt.getMonth() + '').padStart(2, '0')
+  const d = (dt.getDate() + '').padStart(2, '0')
+  const h = (dt.getHours() + '').padStart(2, '0')
+  const mm = (dt.getMinutes() + '').padStart(2, '0')
+  const s = (dt.getSeconds() + '').padStart(2, '0')
+
+  return `${y}-${m}-${d} ${h}:${mm}:${s}`
+})
+
 Vue.config.productionTip = false
 Vue.component('tree-table', TreeTable)// 注册成全局组件
 new Vue({
