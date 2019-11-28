@@ -4,7 +4,7 @@
     <el-breadcrumb separator-class="el-icon-arrow-right">
       <el-breadcrumb-item :to="{ path: '/home' }">首页</el-breadcrumb-item>
       <el-breadcrumb-item>商品管理</el-breadcrumb-item>
-      <el-breadcrumb-item>商品列表</el-breadcrumb-item>
+      <el-breadcrumb-item :to="{ path: '/goods' }">商品列表</el-breadcrumb-item>
       <el-breadcrumb-item>添加商品</el-breadcrumb-item>
     </el-breadcrumb>
     <!-- 卡片视图 -->
@@ -34,6 +34,16 @@
           @tab-click="tabClicked"
         >
           <el-tab-pane label="基本信息" name="0">
+            <el-form-item label="商品分类" prop="goods_cat">
+              <el-cascader
+                expand-trigger="hover"
+                :options="cateoptions"
+                :props="cateProps"
+                v-model="TbsruleForm.goods_cat"
+                clearable
+                @change="parentCateChange"
+              ></el-cascader>
+            </el-form-item>
             <el-form-item label="商品名称" prop="goods_name">
               <el-input v-model="TbsruleForm.goods_name"></el-input>
             </el-form-item>
@@ -46,16 +56,6 @@
             <el-form-item label="商品数量" prop="goods_weight" type="number">
               <el-input v-model="TbsruleForm.goods_weight"></el-input>
             </el-form-item>
-            <el-form-item label="商品分类" prop="goods_cat">
-              <el-cascader
-                expand-trigger="hover"
-                :options="cateoptions"
-                :props="cateProps"
-                v-model="TbsruleForm.goods_cat"
-                clearable
-                @change="parentCateChange"
-              ></el-cascader>
-            </el-form-item>
           </el-tab-pane>
           <el-tab-pane label="商品参数" name="1">
             <el-form-item
@@ -63,18 +63,43 @@
               v-for="value in manyTbsData"
               :key="value.attr_id"
             >
-              <el-checkbox-group v-model="value.attr_vals" >
-                <el-checkbox border :label="value2" v-for="(value2,index) in value.attr_vals" :key="index"></el-checkbox>
+              <el-checkbox-group v-model="value.attr_vals">
+                <el-checkbox
+                  border
+                  :label="value2"
+                  v-for="(value2,index) in value.attr_vals"
+                  :key="index"
+                ></el-checkbox>
               </el-checkbox-group>
             </el-form-item>
           </el-tab-pane>
           <el-tab-pane label="商品属性" name="2">
-              <el-form-item :label='item.attr_name' v-for="item in onlyTbsData" :key="item.attr_id">
-                  <el-input v-model='item.attr_vals'></el-input>
-              </el-form-item>
+            <el-form-item :label="item.attr_name" v-for="item in onlyTbsData" :key="item.attr_id">
+              <el-input v-model="item.attr_vals"></el-input>
+            </el-form-item>
           </el-tab-pane>
-          <el-tab-pane label="商品图片" name="3">商品图片</el-tab-pane>
-          <el-tab-pane label="商品内容" name="4">商品内容</el-tab-pane>
+          <el-tab-pane label="商品图片" name="3">
+            <el-upload
+              :headers="headerObj"
+              :action="uploadURL"
+              :on-preview="handlePreview"
+              :on-remove="handleRemove"
+              :on-success="handleSuccess"
+              list-type="picture"
+            >
+              <el-button size="small" type="primary">点击上传图片</el-button>
+              <!-- 图片预览对话框 -->
+              <el-dialog title="图片预览" :visible.sync="dialogVisible" width="50%">
+                <img class="dialog-img" :src="picture" alt />
+              </el-dialog>
+            </el-upload>
+          </el-tab-pane>
+          <el-tab-pane label="商品内容" name="4">
+            <!-- 富文本编辑器 -->
+            <quill-editor v-model="TbsruleForm.goods_introduce" ></quill-editor>
+            <!-- 添加商品按钮 -->
+            <el-button type="primary" @click='add'>添加商品</el-button>
+          </el-tab-pane>
         </el-tabs>
       </el-form>
     </el-card>
@@ -82,6 +107,7 @@
 </template>
 
 <script>
+import _ from 'lodash'// 引入深拷贝依赖项
 export default {
   created () {
     this.getclassification()
@@ -95,7 +121,10 @@ export default {
         goods_price: 0,
         goods_number: 0,
         goods_weight: 0,
-        goods_cat: [] // 商品分类列表级联选中的值
+        goods_cat: [], // 商品分类列表级联选中的值
+        pics: [], // 上传图片的临时储存地址
+        goods_introduce: '', // 商品详情描述
+        attrs: []
       },
       cateoptions: [],
       cateProps: {
@@ -124,8 +153,15 @@ export default {
           }
         ]
       },
-      manyTbsData: [], // 商品参数页面的值
-      onlyTbsData: [] // 商品属性页面的值
+      manyTbsData: [], // 商品参数页面的值,动态参数
+      onlyTbsData: [], // 商品属性页面的值，静态参数
+      uploadURL: 'http://127.0.0.1:8888/api/private/v1/upload', // 图片上传地址接口
+      // 图片上传需要提供token，手动设置请求头Authorization字段获取
+      headerObj: {
+        Authorization: window.sessionStorage.getItem('token')
+      },
+      picture: '', // 图片预览地址
+      dialogVisible: false
     }
   },
   computed: {
@@ -164,20 +200,27 @@ export default {
     },
     // 监听tabs标签切换,发送请求
     async tabClicked () {
-      if (this.activeIndex === '1') { // 切换到商品参数页面
-        const { data: res } = await this.$axios.get(// 发起请求
+      if (this.activeIndex === '1') {
+        // 切换到商品参数页面
+        const { data: res } = await this.$axios.get(
+          // 发起请求
           `categories/${this.cateID}/attributes`,
           { params: { sel: 'many' } }
         )
         if (res.meta.status !== 200) {
           this.$message.error('商品参数获取失败')
         }
-        res.data.forEach(item => { // 将商品参数分割成数组
-          item.attr_vals = item.attr_vals.length === 0 ? [] : item.attr_vals.split(',')
+        res.data.forEach(item => {
+          // 将商品参数分割成数组
+          item.attr_vals =
+            item.attr_vals.length === 0 ? [] : item.attr_vals.split(',')
         })
         this.manyTbsData = res.data
-      } else if (this.activeIndex === '2') { // 切换到商品属性页面
-        const { data: res } = await this.$axios.get(// 发起请求
+        // console.log(this.manyTbsData)
+      } else if (this.activeIndex === '2') {
+        // 切换到商品属性页面
+        const { data: res } = await this.$axios.get(
+          // 发起请求
           `categories/${this.cateID}/attributes`,
           { params: { sel: 'only' } }
         )
@@ -185,15 +228,81 @@ export default {
           this.$message.error('商品参数获取失败')
         }
         this.onlyTbsData = res.data
-        console.log(this.onlyTbsData)
+        // console.log(this.onlyTbsData)
       }
+    },
+    // 处理图片预览效果，获取图片信息
+    handlePreview (file) {
+      this.picture = file.response.data.url
+      this.dialogVisible = true
+    },
+    // 处理图片移除时候的操作
+    handleRemove (file) {
+      const filePath = file.response.data.tmp_path // 获取移除图片的临时地址
+      const i = this.TbsruleForm.pics.findIndex(x => x.pic === filePath) // 获取图片索引
+      this.TbsruleForm.pics.splice(i, 1) // 删除图片
+    },
+    // 图片上传成功时候的操作
+    handleSuccess (response) {
+      const pictureUrl = {
+        pic: response.data.tmp_path
+      }
+      // 将图片的临时存储地址，传递给form表单中的图片存储对象
+      this.TbsruleForm.pics.push(pictureUrl)
+    },
+    // 发送请求,添加商品
+    add () {
+      this.$refs.ruleForm.validate(async valid => {
+        if (!valid) {
+          return this.$notify.error({
+            title: '提示',
+            message: '请完成基本信息的填写'
+          })
+        }
+        // 处理商品参数页面的值,动态参数
+        this.manyTbsData.forEach(item => {
+          const attr = {
+            attr_id: item.attr_id,
+            attr_value: item.attr_vals.join(',')
+          }
+          this.TbsruleForm.attrs.push(attr)
+        })
+        // 处理商品属性页面的值，静态参数
+        this.onlyTbsData.forEach(item => {
+          const attr = {
+            attr_id: item.attr_id,
+            attr_value: item.attr_vals
+          }
+          this.TbsruleForm.attrs.push(attr)
+        })
+        //  将form表单数据，深拷贝为一个新对象
+        const form = _.cloneDeep(this.TbsruleForm)
+        // 将新form对象中的级联选择器值，变成字符床，而不影响原form中级联选择器的值
+        form.goods_cat = form.goods_cat.join(',')
+        //  发起请求
+        const { data: res } = await this.$axios.post('goods', form)
+        if (res.meta.status !== 201) {
+          return this.$notify.error({
+            title: '错误',
+            message: res.meta.msg
+          })
+        }
+        this.$message.success(res.meta.msg)
+      })
     }
   }
 }
 </script>
 
 <style lang='less' scoped>
-.el-checkbox{
-    margin: 0 10px !important
+.el-checkbox {
+  margin: 0 10px !important;
+}
+.dialog-img {
+  width: 100%;
+}
+.quill-editor{
+  min-height:300px;
+  margin-bottom: 50px
 }
 </style>
