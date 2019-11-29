@@ -31,9 +31,19 @@
           <el-tag type="warning" v-if="scope.row.cat_level===2">三级</el-tag>
         </template>
         <!-- 第四列 操作 -->
-        <template slot="but">
-          <el-button type="primary" size="mini" icon="el-icon-edit">编辑</el-button>
-          <el-button type="danger" size="mini" icon="el-icon-delete">删除</el-button>
+        <template slot="but" slot-scope="scope">
+          <el-button
+            type="primary"
+            size="mini"
+            icon="el-icon-edit"
+            @click="editclassify(scope.row.cat_id)"
+          >编辑</el-button>
+          <el-button
+            type="danger"
+            size="mini"
+            icon="el-icon-delete"
+            @click="deleteclassify(scope.row.cat_id)"
+          >删除</el-button>
         </template>
       </tree-table>
       <!-- 分页器 -->
@@ -73,10 +83,23 @@
         <el-button type="primary" @click="addForm">确 定</el-button>
       </span>
     </el-dialog>
+    <!-- 编辑分类 对话框 -->
+    <el-dialog title="编辑分类" :visible.sync="dialogVisible2" width="40%" >
+      <el-form :model="editruleForm" :rules="editrules" ref="editruleForm" label-width="100px" >
+        <el-form-item label="分类名称" prop='cat_name'>
+          <el-input v-model='editruleForm.cat_name'></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible2 = false">取 消</el-button>
+        <el-button type="primary" @click="submitEdit">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
+
 export default {
   created () {
     this.getlaCssifyList()
@@ -118,13 +141,23 @@ export default {
         }
       ],
       dialogVisible: false,
+      dialogVisible2: false,
       ClassificationForm: {
-        // 请求参数
+        // 添加分类
         cat_name: '', // 添加分类的名称
         cat_pid: 0, // 父级分类的id
         cat_level: 0 // 分类的等级
       },
+      editruleForm: {
+        // 编辑分类
+        cat_name: '' // 编辑分类的名称
+      },
       ClassificationRules: {
+        cat_name: [
+          { required: true, message: '请输入分类名称', trigger: 'blur' }
+        ]
+      },
+      editrules: {
         cat_name: [
           { required: true, message: '请输入分类名称', trigger: 'blur' }
         ]
@@ -209,6 +242,41 @@ export default {
       this.selectedKeys = []
       this.ClassificationForm.cat_pid = 0 // 重置
       this.ClassificationForm.cat_level = 0 // 重置
+    },
+    // 发送请求,删除商品分类
+    async deleteclassify (Id) {
+      const result = await this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).catch(err => err)
+      if (result !== 'confirm') {
+        return this.$message.info('取消了删除')
+      }
+      const { data: res } = await this.$axios.delete(`categories/${Id}`)
+      if (res.meta.status !== 200) {
+        return this.$message.error('删除操作失败')
+      }
+      this.$message.success('删除成功')
+      this.getlaCssifyList()
+    },
+    // 发送请求,根据id获取分类数据
+    async editclassify (Id) {
+      this.dialogVisible2 = true
+      const { data: res } = await this.$axios.get(`categories/${Id}`)
+      this.editruleForm = res.data
+    },
+    // 发送请求,提交编辑后的数据
+    submitEdit () {
+      this.$refs.editruleForm.validate(async valid => {
+        if (!valid) {
+          return this.$message.error('验证未通过')
+        }
+        const { data: res } = await this.$axios.put(`categories/${this.editruleForm.cat_id}`, { cat_name: this.editruleForm.cat_name })
+        this.$message.success(res.meta.msg)
+        this.getlaCssifyList()
+        this.dialogVisible2 = false
+      })
     }
   }
 }

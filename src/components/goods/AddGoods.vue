@@ -44,17 +44,17 @@
                 @change="parentCateChange"
               ></el-cascader>
             </el-form-item>
-            <el-form-item label="商品名称" prop="goods_name">
+            <el-form-item label="商品名称-(不能为空/重复,否则创建失败)" prop="goods_name">
               <el-input v-model="TbsruleForm.goods_name"></el-input>
             </el-form-item>
             <el-form-item label="商品价格" prop="goods_price">
               <el-input v-model="TbsruleForm.goods_price" type="number"></el-input>
             </el-form-item>
-            <el-form-item label="商品重量" prop="goods_number" type="number">
-              <el-input v-model="TbsruleForm.goods_number"></el-input>
+            <el-form-item label="商品重量" prop="goods_number" >
+              <el-input v-model="TbsruleForm.goods_number" type="number"></el-input>
             </el-form-item>
-            <el-form-item label="商品数量" prop="goods_weight" type="number">
-              <el-input v-model="TbsruleForm.goods_weight"></el-input>
+            <el-form-item label="商品数量" prop="goods_weight" >
+              <el-input v-model="TbsruleForm.goods_weight" type="number"></el-input>
             </el-form-item>
           </el-tab-pane>
           <el-tab-pane label="商品参数" name="1">
@@ -86,12 +86,10 @@
               :on-remove="handleRemove"
               :on-success="handleSuccess"
               list-type="picture"
+              style='width:500px'
+              :multiple='true'
             >
               <el-button size="small" type="primary">点击上传图片</el-button>
-              <!-- 图片预览对话框 -->
-              <el-dialog title="图片预览" :visible.sync="dialogVisible" width="50%">
-                <img class="dialog-img" :src="picture" alt />
-              </el-dialog>
             </el-upload>
           </el-tab-pane>
           <el-tab-pane label="商品内容" name="4">
@@ -124,7 +122,7 @@ export default {
         goods_cat: [], // 商品分类列表级联选中的值
         pics: [], // 上传图片的临时储存地址
         goods_introduce: '', // 商品详情描述
-        attrs: []
+        attrs: [] // 商品参数
       },
       cateoptions: [],
       cateProps: {
@@ -174,12 +172,13 @@ export default {
     }
   },
   methods: {
+    // 发送请求,获取商品分类列表数据
     async getclassification () {
       const { data: res } = await this.$axios.get('categories')
       if (res.meta.status !== 200) {
         this.$message.error('获取失败')
       }
-      this.cateoptions = res.data
+      this.cateoptions = res.data// 赋值给级联选择器
     },
     // 监听级联选择器，只允许选择第三级数据
     parentCateChange () {
@@ -200,10 +199,10 @@ export default {
     },
     // 监听tabs标签切换,发送请求
     async tabClicked () {
+      // 切换到商品参数页面
       if (this.activeIndex === '1') {
-        // 切换到商品参数页面
+        // 发起请求,获取many动态参数
         const { data: res } = await this.$axios.get(
-          // 发起请求
           `categories/${this.cateID}/attributes`,
           { params: { sel: 'many' } }
         )
@@ -216,11 +215,10 @@ export default {
             item.attr_vals.length === 0 ? [] : item.attr_vals.split(',')
         })
         this.manyTbsData = res.data
-        // console.log(this.manyTbsData)
-      } else if (this.activeIndex === '2') {
         // 切换到商品属性页面
+      } else if (this.activeIndex === '2') {
+        // 发起请求,获取only静态参数
         const { data: res } = await this.$axios.get(
-          // 发起请求
           `categories/${this.cateID}/attributes`,
           { params: { sel: 'only' } }
         )
@@ -228,7 +226,6 @@ export default {
           this.$message.error('商品参数获取失败')
         }
         this.onlyTbsData = res.data
-        // console.log(this.onlyTbsData)
       }
     },
     // 处理图片预览效果，获取图片信息
@@ -288,6 +285,7 @@ export default {
           })
         }
         this.$message.success(res.meta.msg)
+        this.activeIndex = '6'
       })
     }
   }
@@ -304,5 +302,8 @@ export default {
 .quill-editor{
   min-height:300px;
   margin-bottom: 50px
+}
+.el-input{
+  width:300px
 }
 </style>
